@@ -1,0 +1,132 @@
+name: java-service
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      service_dir:
+        required: true
+        type: string
+      demo:
+        required: false
+        default: compose
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  COMPOSE_PROJECT_NAME: telemed-ci
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE: ${{ inputs.service }}
+      SERVICE_DIR: ${{ inputs.service_dir }}
+      IMAGE: telemedicine/${{ inputs.service }}:local
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Lint and test
+        run: ./gradlew -p "$SERVICE_DIR" spotlessJavaCheck test --no-daemon --console=plain
+
+      - name: Build image
+        run: docker build -f "$SERVICE_DIR/Dockerfile" -t "$IMAGE" .
+
+      - name: Prepare demo env
+        if: inputs.demo == 'compose'
+        run: cp .env.example .env
+
+      - name: Start compose demo
+        if: inputs.demo == 'compose'
+        run: docker compose up -d "$SERVICE"
+
+      - name: Start gateway demo
+        if: inputs.demo == 'gateway'
+        run: |
+          docker network create demo-net
+          docker run -d --name demo-redis --network demo-net redis:7-alpine
+          docker run -d --name demo-gateway --network demo-net \
+            -p 8081:8081 \
+            -p 8091:8091 \
+            -e SERVER_PORT=8081 \
+            -e MANAGEMENT_PORT=8091 \
+            -e REDIS_HOST=demo-redis \
+            -e REDIS_PORT=6379 \
+            -e AUTH_SERVICE_URL=http://auth-service:8080 \
+            -e JWK_SET_URI=http://auth-service:8080/oauth2/jwks \
+            -e JWT_ISSUER=auth-service \
+            -e JWT_AUDIENCE=telemedicine \
+            -e INTERNAL_SERVICE_TOKEN=demo-internal-token \
+            -e FRONTEND_URL=http://localhost:3000 \
+            -e SPRINGDOC_ENABLED=true \
+            -e ENV=demo \
+            "$IMAGE"
+
+      - name: Check compose demo
+        if: inputs.demo == 'compose'
+        run: |
+          cid="$(docker compose ps -q "$SERVICE")"
+          if [ -z "$cid" ]; then
+            docker compose logs "$SERVICE"
+            exit 1
+          fi
+          for i in {1..90}; do
+            status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || echo missing)"
+            case "$status" in
+              healthy|running)
+                echo "$SERVICE is $status"
+                exit 0
+                ;;
+              unhealthy|exited|dead)
+                docker compose logs "$SERVICE"
+                exit 1
+                ;;
+            esac
+            sleep 5
+          done
+          docker compose logs "$SERVICE"
+          exit 1
+
+      - name: Check gateway demo
+        if: inputs.demo == 'gateway'
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8091/actuator/health/readiness | grep -q '"status":"UP"'; then
+              break
+            fi
+            if [ "$i" = "60" ]; then
+              docker logs demo-gateway
+              exit 1
+            fi
+            sleep 2
+          done
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/api/v1/users/me)"
+          test "$code" = "401"
+          echo "$SERVICE demo is ready"
+
+      - name: Show demo logs
+        if: failure()
+        run: |
+          docker compose logs "$SERVICE" || true
+          docker logs demo-gateway || true
+
+      - name: Stop demo
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans || true
+          docker rm -f demo-gateway demo-redis || true
+          docker network rm demo-net || true
