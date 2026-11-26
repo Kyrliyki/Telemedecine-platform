@@ -1,0 +1,262 @@
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+
+spring:
+  application:
+    name: api-gateway
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:3000}
+            response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:30s}
+          default-filters:
+            - name: Retry
+              args:
+                retries: 1
+                methods: GET
+                series: SERVER_ERROR
+                exceptions:
+                  - java.io.IOException
+                  - java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: auth-jwks
+              uri: ${AUTH_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/oauth2/jwks
+            - id: user-service-admin-events
+              uri: ${USER_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/admin/users/events/**
+            - id: schedule-service-admin
+              uri: ${SCHEDULE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/admin/schedule/**
+            - id: emr-service-admin
+              uri: ${EMR_SERVICE_URL:http://localhost:8089}
+              predicates:
+                - Path=/api/v1/admin/emr/**
+            - id: user-service-admin-doctors
+              uri: ${USER_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/admin/users/doctors/**
+            - id: auth-admin
+              uri: ${AUTH_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/v1/admin/**
+            - id: auth-openapi
+              uri: ${AUTH_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/v3/api-docs/auth
+              filters:
+                - SetPath=/v3/api-docs
+            - id: user-openapi
+              uri: ${USER_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/v3/api-docs/user
+              filters:
+                - SetPath=/v3/api-docs
+            - id: appointment-openapi
+              uri: ${APPOINTMENT_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/v3/api-docs/appointment
+              filters:
+                - SetPath=/v3/api-docs
+            - id: schedule-openapi
+              uri: ${SCHEDULE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/v3/api-docs/schedule
+              filters:
+                - SetPath=/v3/api-docs
+            - id: chat-openapi
+              uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/v3/api-docs/chat
+              filters:
+                - SetPath=/v3/api-docs
+            - id: file-openapi
+              uri: ${FILE_SERVICE_URL:http://localhost:8086}
+              predicates:
+                - Path=/v3/api-docs/file
+              filters:
+                - SetPath=/v3/api-docs
+            - id: video-openapi
+              uri: ${VIDEO_SERVICE_URL:http://localhost:8087}
+              predicates:
+                - Path=/v3/api-docs/video
+              filters:
+                - SetPath=/v3/api-docs
+            - id: notification-openapi
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8088}
+              predicates:
+                - Path=/v3/api-docs/notification
+              filters:
+                - SetPath=/v3/api-docs
+            - id: emr-openapi
+              uri: ${EMR_SERVICE_URL:http://localhost:8089}
+              predicates:
+                - Path=/v3/api-docs/emr
+              filters:
+                - SetPath=/v3/api-docs
+            - id: user-service
+              uri: ${USER_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/users/**
+            - id: appointment-service
+              uri: ${APPOINTMENT_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/v1/appointments/**
+            - id: schedule-service
+              uri: ${SCHEDULE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/schedule/**
+            - id: chat-service-root
+              uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/v1/chat
+              filters:
+                - SetPath=/api/v1/dialogs
+            - id: chat-service
+              uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/v1/chat/**
+              filters:
+                - RewritePath=/api/v1/chat/(?<segment>.*), /api/v1/dialogs/$\{segment}
+            - id: chat-websocket-root
+              uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/ws/chat
+              filters:
+                - SetPath=/ws
+            - id: chat-websocket
+              uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/ws/chat/**
+              filters:
+                - RewritePath=/ws/chat/(?<segment>.*), /ws/$\{segment}
+            - id: file-service-chats
+              uri: ${FILE_SERVICE_URL:http://localhost:8086}
+              predicates:
+                - Path=/api/v1/chats/**
+              metadata:
+                response-timeout: 600000
+                connect-timeout: 5000
+            - id: file-service
+              uri: ${FILE_SERVICE_URL:http://localhost:8086}
+              predicates:
+                - Path=/api/v1/files/**
+              metadata:
+                response-timeout: 600000
+                connect-timeout: 5000
+            - id: video-service
+              uri: ${VIDEO_SERVICE_URL:http://localhost:8087}
+              predicates:
+                - Path=/api/v1/video/**
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8088}
+              predicates:
+                - Path=/api/v1/notifications/**
+            - id: emr-service
+              uri: ${EMR_SERVICE_URL:http://localhost:8089}
+              predicates:
+                - Path=/api/v1/emr/**
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:auth-service}
+    jwk-set-uri: ${JWK_SET_URI:http://localhost:8080/oauth2/jwks}
+    audience:
+      - ${JWT_AUDIENCE:telemedicine}
+    clock-skew: 30s
+    blacklist-enabled: ${JWT_BLACKLIST_ENABLED:true}
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:true}
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    urls:
+      - name: auth-service
+        url: /v3/api-docs/auth
+      - name: user-service
+        url: /v3/api-docs/user
+      - name: appointment-service
+        url: /v3/api-docs/appointment
+      - name: schedule-service
+        url: /v3/api-docs/schedule
+      - name: chat-service
+        url: /v3/api-docs/chat
+      - name: file-service
+        url: /v3/api-docs/file
+      - name: video-service
+        url: /v3/api-docs/video
+      - name: notification-service
+        url: /v3/api-docs/notification
+      - name: emr-service
+        url: /v3/api-docs/emr
+
+gateway:
+  cors:
+    allowed-origins:
+      - ${FRONTEND_URL:http://localhost:3000}
+  dlq:
+    internal-token: ${INTERNAL_SERVICE_TOKEN}
+    services:
+      - name: auth-service
+        base-url: ${AUTH_SERVICE_URL:http://localhost:8080}
+      - name: user-service
+        base-url: ${USER_SERVICE_URL:http://localhost:8082}
+      - name: schedule-service
+        base-url: ${SCHEDULE_SERVICE_URL:http://localhost:8084}
+      - name: emr-service
+        base-url: ${EMR_SERVICE_URL:http://localhost:8089}
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8091}
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,redis
+
+logging:
+  level:
+    gateway.access: INFO
+    org.springframework.cloud.gateway: INFO
+  structured:
+    format:
+      console: ecs
+    ecs:
+      service:
+        name: ${spring.application.name:api-gateway}
+        environment: ${ENV:dev}
