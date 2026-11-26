@@ -1,0 +1,110 @@
+[versions]
+
+telemed-libs = "0.0.1"
+
+java = "25"
+
+# Spring Boot / Spring Cloud
+spring-boot = "4.1.1"
+spring-gateway-server-webflux = "5.0.3"
+spring-dependency-management = "1.1.7"
+spring-retry = "2.0.12"
+
+# JWT
+nimbus-jose-jwt = "10.10"
+
+# Databases
+postgresql = "42.7.13"
+flyway = "13.9.0"
+
+# Observability
+micrometer = "1.17.1"
+loki-logback = "2.1.0"
+
+# Utils
+lombok = "1.18.48"
+mapstruct = "1.6.3"
+
+# Testing
+junit = "6.1.3"
+mockito = "5.24.0"
+testcontainers = "2.0.5"
+assertj = "3.27.7"
+
+# Code quality
+spotbugs = "6.5.12"
+spotless = "8.10.4"
+
+# OpenAPI
+springdoc-openapi = "3.1.1"
+
+[libraries]
+# Custom modules
+telemed-common-security = { module = "com.telemed:common-security", version.ref = "telemed-libs" }
+telemed-common-messaging = { module = "com.telemed:common-messaging", version.ref = "telemed-libs" }
+telemed-common-events = { module = "com.telemed:common-events", version.ref = "telemed-libs" }
+telemed-common-outbox = { module = "com.telemed:common-outbox", version.ref = "telemed-libs" }
+telemed-common-observability = { module = "com.telemed:common-observability", version.ref = "telemed-libs" }
+
+# Spring Boot starters 
+spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-data-redis-reactive = { module = "org.springframework.boot:spring-boot-starter-data-redis-reactive" }
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+spring-boot-starter-amqp = { module = "org.springframework.boot:spring-boot-starter-amqp" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-json = { module = "org.springframework.boot:spring-boot-starter-json" }
+spring-boot-starter-security-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-security-oauth2-resource-server" }
+spring-boot-starter-oauth2-authorization-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-authorization-server" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
+spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
+
+# Spring extras
+spring-retry = { module = "org.springframework.retry:spring-retry", version.ref = "spring-retry" }
+
+# Spring Cloud
+spring-cloud-starter-gateway-server-webflux = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webflux", version.ref = "spring-gateway-server-webflux" }
+
+# JWT
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
+
+# Databases
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+
+# Observability
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
+loki-logback-appender = { module = "com.github.loki4j:loki-logback-appender", version.ref = "loki-logback" }
+
+# Utils
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+
+# Testing
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+# Testcontainers 
+testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-rabbitmq = { module = "org.testcontainers:testcontainers-rabbitmq" }
+
+# OpenAPI/Swagger
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
+springdoc-openapi-starter-webflux-ui = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc-openapi" }
+
+# Gradle plugins
+spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
+spring-dependency-management-gradle-plugin = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "spring-dependency-management" }
+spotless-gradle-plugin = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+spotbugs-gradle-plugin = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version.ref = "spotbugs" }
