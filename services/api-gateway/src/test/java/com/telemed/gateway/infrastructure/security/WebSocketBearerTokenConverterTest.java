@@ -29,7 +29,9 @@ class WebSocketBearerTokenConverterTest {
   void readsTokenFromQueryParameterForWebSocketHandshake() {
     MockServerWebExchange exchange =
         MockServerWebExchange.from(
-            MockServerHttpRequest.get("/ws/chat/rooms/1").queryParam("token", "query-token").build());
+            MockServerHttpRequest.get("/ws/chat/rooms/1")
+                .queryParam("token", "query-token")
+                .build());
 
     assertThat(token(exchange)).isEqualTo("query-token");
   }
@@ -50,7 +52,9 @@ class WebSocketBearerTokenConverterTest {
   void ignoresQueryParameterForRegularRequests() {
     MockServerWebExchange exchange =
         MockServerWebExchange.from(
-            MockServerHttpRequest.get("/api/v1/users/me").queryParam("token", "query-token").build());
+            MockServerHttpRequest.get("/api/v1/users/me")
+                .queryParam("token", "query-token")
+                .build());
 
     assertThat(authentication(exchange)).isNull();
   }

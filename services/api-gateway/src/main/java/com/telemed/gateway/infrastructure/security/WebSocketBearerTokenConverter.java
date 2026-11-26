@@ -9,13 +9,13 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
- * Resolves bearer tokens from the {@code Authorization} header and, for WebSocket
- * handshakes only, from the {@code token} query parameter.
+ * Resolves bearer tokens from the {@code Authorization} header and, for WebSocket handshakes only,
+ * from the {@code token} query parameter.
  *
- * <p>Browsers cannot set custom headers on {@code new WebSocket(...)}, so the token has to
- * travel in the URL. Accepting {@code ?token=} on every path would leak access tokens into
- * proxy access logs and browser history for regular requests, therefore the query parameter
- * is honoured only for the configured WebSocket path prefixes.
+ * <p>Browsers cannot set custom headers on {@code new WebSocket(...)}, so the token has to travel
+ * in the URL. Accepting {@code ?token=} on every path would leak access tokens into proxy access
+ * logs and browser history for regular requests, therefore the query parameter is honoured only for
+ * the configured WebSocket path prefixes.
  */
 public final class WebSocketBearerTokenConverter implements ServerAuthenticationConverter {
 

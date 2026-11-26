@@ -117,10 +117,7 @@ class ApiGatewayIntegrationTest {
         .block();
 
     assertThat(blacklistChecker.isBlacklisted(jti).block()).isTrue();
-    assertThat(
-            blacklistChecker
-                .isUserRevokedBefore(userId, Instant.now().minusSeconds(60))
-                .block())
+    assertThat(blacklistChecker.isUserRevokedBefore(userId, Instant.now().minusSeconds(60)).block())
         .isTrue();
   }
 
