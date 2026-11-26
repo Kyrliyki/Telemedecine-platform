@@ -21,7 +21,7 @@ COPY services/api-gateway/src/main ./services/api-gateway/src/main
 
 RUN --mount=type=cache,target=/gradle-cache,sharing=shared \
     gradle -p services/api-gateway bootJar \
-      --no-daemon --console=plain --build-cache --configuration-cache --offline
+      --no-daemon --console=plain --build-cache --configuration-cache
 
 FROM eclipse-temurin:25-jre-alpine
 
