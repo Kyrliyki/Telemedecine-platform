@@ -1,0 +1,39 @@
+name: schedule-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/schedule-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/schedule-service.yml'
+      - '.github/workflows/_java-service.yml'
+  pull_request:
+    paths:
+      - 'services/schedule-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/schedule-service.yml'
+      - '.github/workflows/_java-service.yml'
+  workflow_dispatch:
+
+jobs:
+  schedule-service:
+    uses: ./.github/workflows/_java-service.yml
+    with:
+      service: schedule-service
+      service_dir: services/schedule-service
+      demo: compose
