@@ -63,13 +63,15 @@ jobs:
         shell: bash
         run: |
           schema="${SERVICE//-/_}"
-          role="${schema}_svc"
+          role="${schema%_service}_svc"
           docker compose up -d postgres
           for i in {1..60}; do
-            if docker compose exec -T postgres psql -U telemedicine -d telemedicine -tAc "SELECT 1 FROM pg_namespace WHERE nspname='$schema'" | grep -q 1 \
-               && docker compose exec -T postgres psql -U telemedicine -d telemedicine -tAc "SELECT 1 FROM pg_roles WHERE rolname='$role'" | grep -q 1; then
-              echo "database schema $schema and role $role are ready"
-              exit 0
+            if docker compose exec -T postgres pg_isready -U telemedicine -d telemedicine >/dev/null 2>&1; then
+              if docker compose exec -T postgres psql -U telemedicine -d telemedicine -tAc "SELECT 1 FROM pg_namespace WHERE nspname='$schema'" 2>/dev/null | grep -q 1 \
+                 && docker compose exec -T postgres psql -U telemedicine -d telemedicine -tAc "SELECT 1 FROM pg_roles WHERE rolname='$role'" 2>/dev/null | grep -q 1; then
+                echo "database schema $schema and role $role are ready"
+                exit 0
+              fi
             fi
             if [ "$i" = "60" ]; then
               docker compose logs postgres
