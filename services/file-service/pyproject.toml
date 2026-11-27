@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "file-service"
+version = "0.1.0"
+description = "FileService microservice for a telemedicine platform: chat attachments on S3/MinIO"
+requires-python = ">=3.14"
+dependencies = [
+    "aio-pika",
+    "alembic",
+    "anyio",
+    "fastapi",
+    "httpx",
+    "minio",
+    "prometheus-client",
+    "psycopg[binary]",
+    "pydantic",
+    "pydantic-settings",
+    "pyjwt[crypto]",
+    "python-multipart",
+    "redis",
+    "sqlalchemy[asyncio]",
+    "structlog",
+    "urllib3",
+    "uvicorn",
+    "common-auth",
+    "common-messaging",
+    "common-observability",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ruff",
+    "testcontainers[postgres,minio]",
+]
+
+[tool.uv.sources]
+common-auth = { workspace = true }
+common-messaging = { workspace = true }
+common-observability = { workspace = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py314"
+src = ["src", "tests_file_service"]
+exclude = ["migrations/versions", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+ignore = ["B008", "RUF001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["file_service"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests_file_service"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra"
+markers = ["integration: requires external services (Docker/Testcontainers)"]

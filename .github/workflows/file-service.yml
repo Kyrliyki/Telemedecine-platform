@@ -1,0 +1,36 @@
+name: file-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/file-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/file-service.yml'
+      - '.github/workflows/_python-service.yml'
+  pull_request:
+    paths:
+      - 'services/file-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/file-service.yml'
+      - '.github/workflows/_python-service.yml'
+  workflow_dispatch:
+
+jobs:
+  file-service:
+    uses: ./.github/workflows/_python-service.yml
+    with:
+      service: file-service
+      service_dir: services/file-service
