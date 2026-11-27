@@ -21,7 +21,7 @@ env:
   COMPOSE_PROJECT_NAME: telemed-ci
 
 jobs:
-  ci:
+  pipeline:
     runs-on: ubuntu-latest
     env:
       SERVICE: ${{ inputs.service }}

@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
+  api-gateway::
     uses: ./.github/workflows/_java-service.yml
     with:
       service: api-gateway
