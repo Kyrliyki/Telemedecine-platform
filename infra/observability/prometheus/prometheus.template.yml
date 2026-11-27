@@ -1,0 +1,93 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: docker
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '.+'
+        action: drop
+
+  - job_name: alloy
+    static_configs:
+      - targets: ["alloy:12345"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '.+'
+        action: drop
+
+  - job_name: api-gateway
+    metrics_path: /actuator/prometheus
+    metric_relabel_configs: &keep-business
+      - source_labels: [__name__]
+        regex: 'http_server_requests_seconds_(bucket|count|sum|max)|http_requests_total|http_request_duration_seconds_(bucket|count|sum|max)|jvm_memory_used_bytes|outbox_(pending|pending_total|sent_total|failed_total|dead_total)|gateway_requests_.*|user_auth_events_.*|schedule_.*|emr_records_.*|appointment_outbox_.*|file_service_files_.*'
+        action: keep
+
+      - source_labels: [__name__]
+        regex: '.*_created'
+        action: drop
+    static_configs:
+      - targets: ["api-gateway:__GATEWAY_MANAGEMENT_PORT__"]
+
+  - job_name: auth-service
+    metrics_path: /actuator/prometheus
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["auth-service:__AUTH_MANAGEMENT_PORT__"]
+
+  - job_name: user-service
+    metrics_path: /actuator/prometheus
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["user-service:__USER_MANAGEMENT_PORT__"]
+
+  - job_name: schedule-service
+    metrics_path: /actuator/prometheus
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["schedule-service:__SCHEDULE_MANAGEMENT_PORT__"]
+
+  - job_name: emr-service
+    metrics_path: /actuator/prometheus
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["emr-service:__EMR_MANAGEMENT_PORT__"]
+
+  - job_name: appointment-service
+    metrics_path: /metrics
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["appointment-service:__APPOINTMENT_HTTP_PORT__"]
+
+  - job_name: chat-service
+    metrics_path: /metrics
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["chat-service:__CHAT_HTTP_PORT__"]
+
+  - job_name: file-service
+    metrics_path: /metrics
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["file-service:__FILE_HTTP_PORT__"]
+
+  - job_name: video-service
+    metrics_path: /metrics
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["video-service:__VIDEO_HTTP_PORT__"]
+
+  - job_name: notification-service
+    metrics_path: /metrics
+    metric_relabel_configs: *keep-business
+    static_configs:
+      - targets: ["notification-service:__NOTIFICATION_HTTP_PORT__"]

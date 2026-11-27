@@ -1,0 +1,817 @@
+﻿name: telemedicine-platform
+
+x-notification-environment: &notification-environment
+  ENVIRONMENT: docker
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  SERVER_PORT: "${NOTIFICATION_HTTP_PORT:-8088}"
+  DB_URL: postgresql+asyncpg://notification_svc:${NOTIFICATION_DB_PASSWORD:-notification}@postgres:5432/${POSTGRES_DB:-telemedicine}
+  DB_SCHEMA: notification_service
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-telemedicine}:${RABBITMQ_PASSWORD:-telemedicine}@rabbitmq:5672/
+  RABBITMQ_AUTH_QUEUE: notification-service.auth.events
+  RABBITMQ_USER_QUEUE: notification-service.user.events
+  RABBITMQ_APPOINTMENT_QUEUE: notification-service.appointment.events
+  RABBITMQ_VIDEO_QUEUE: notification-service.video.events
+  RABBITMQ_NOTIFICATION_EXCHANGE: notification.events
+  REDIS_URL: redis://redis:6379/5
+  AUTH_REDIS_URL: redis://redis:6379/0
+  AUTH_REVOCATION_ENABLED: "true"
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+  IN_APP_ENABLED: "true"
+  EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+  SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Telemed}
+  SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+  SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+  SMTP_TIMEOUT_SECONDS: ${SMTP_TIMEOUT_SECONDS:-15}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+  AUTH_PUBLIC_URL: http://auth-service:${AUTH_HTTP_PORT:-8080}
+  JWT_ALGORITHM: RS256
+  JWT_SECRET: ${PYTHON_SERVICE_JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+  JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+  JWKS_URL: ${JWT_JWKS_URL:-http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks}
+  DEV_ENDPOINTS_ENABLED: "true"
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${GATEWAY_HOST_PORT:-8081}}
+  DISPATCHER_INTERVAL_SECONDS: "2"
+
+x-file-environment: &file-environment
+  APP_ENV: docker
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_JSON: "true"
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${GATEWAY_HOST_PORT:-8081}}
+  DATABASE_URL: postgresql+asyncpg://file_svc:${FILE_DB_PASSWORD:-file}@postgres:5432/${POSTGRES_DB:-telemedicine}
+  DB_SCHEMA: file_service
+  DB_ECHO: "false"
+  S3_ENDPOINT: http://minio:9000
+  S3_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:${MINIO_PORT:-9000}}
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER:-telemedicine}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-telemedicine123}
+  S3_BUCKET: ${FILE_BUCKET:-chat-files}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_SECURE: "false"
+  S3_PRESIGN_TTL_SECONDS: ${S3_PRESIGN_TTL_SECONDS:-900}
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-telemedicine}:${RABBITMQ_PASSWORD:-telemedicine}@rabbitmq:5672/
+  RABBITMQ_EVENTS_EXCHANGE: file.events
+  RABBITMQ_CHAT_EVENTS_EXCHANGE: chat.events
+  RABBITMQ_CONSUMER_QUEUE: file-service.chat-events
+  RABBITMQ_DEAD_LETTER_EXCHANGE: file.dlx
+  REDIS_URL: redis://redis:6379/3
+  MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-100}
+  AUTH_DISABLED: "false"
+  JWT_ALGORITHM: RS256
+  JWT_SECRET: ${PYTHON_SERVICE_JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+  JWT_JWKS_URL: ${JWT_JWKS_URL:-http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks}
+  JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+  AUTH_REDIS_URL: redis://redis:6379/0
+  AUTH_REVOCATION_ENABLED: "true"
+  DEV_USER_ID: ${DEV_USER_ID:-00000000-0000-0000-0000-000000000001}
+  DEV_USER_ROLES: ${DEV_USER_ROLES:-patient}
+  CHAT_SERVICE_URL: ${CHAT_INTERNAL_URL:-http://chat-service:${CHAT_HTTP_PORT:-8085}}
+  CHAT_ACCESS_ALLOW_ALL: ${CHAT_ACCESS_ALLOW_ALL:-false}
+  INTERNAL_API_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-telemedicine}
+      POSTGRES_USER: ${POSTGRES_USER:-telemedicine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-telemedicine}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_svc}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:-user_svc}
+      SCHEDULE_DB_PASSWORD: ${SCHEDULE_DB_PASSWORD:-schedule_svc}
+      EMR_DB_PASSWORD: ${EMR_DB_PASSWORD:-emr_svc}
+      APPOINTMENT_DB_PASSWORD: ${APPOINTMENT_DB_PASSWORD:-appointment}
+      CHAT_DB_PASSWORD: ${CHAT_DB_PASSWORD:-chat}
+      FILE_DB_PASSWORD: ${FILE_DB_PASSWORD:-file}
+      VIDEO_DB_PASSWORD: ${VIDEO_DB_PASSWORD:-video}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notification}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-telemedicine} -d ${POSTGRES_DB:-telemedicine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-telemedicine}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-telemedicine}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: bitnamilegacy/minio:latest
+
+    user: "0"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-telemedicine}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-telemedicine123}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKETS:-telemedicine,chat-files}
+      MINIO_BROWSER: "on"
+
+      MINIO_API_CORS_ALLOW_ORIGIN: ${CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://localhost:${GATEWAY_HOST_PORT:-8081}}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./infra/livekit/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "${LIVEKIT_PORT:-7880}:7880"
+      - "${LIVEKIT_RTC_TCP_PORT:-7881}:7881"
+      - "50000-50100:50000-50100/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:7880/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.4.2
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+      - -config.expand-env=true
+    environment:
+      LOKI_RETENTION: ${LOKI_RETENTION:-168h}
+    volumes:
+      - ./infra/observability/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:v1.8.2
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./infra/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sed \
+          -e "s|__GATEWAY_MANAGEMENT_PORT__|$${GATEWAY_MANAGEMENT_PORT}|g" \
+          -e "s|__AUTH_MANAGEMENT_PORT__|$${AUTH_MANAGEMENT_PORT}|g" \
+          -e "s|__USER_MANAGEMENT_PORT__|$${USER_MANAGEMENT_PORT}|g" \
+          -e "s|__SCHEDULE_MANAGEMENT_PORT__|$${SCHEDULE_MANAGEMENT_PORT}|g" \
+          -e "s|__EMR_MANAGEMENT_PORT__|$${EMR_MANAGEMENT_PORT}|g" \
+          -e "s|__APPOINTMENT_HTTP_PORT__|$${APPOINTMENT_HTTP_PORT}|g" \
+          -e "s|__CHAT_HTTP_PORT__|$${CHAT_HTTP_PORT}|g" \
+          -e "s|__FILE_HTTP_PORT__|$${FILE_HTTP_PORT}|g" \
+          -e "s|__VIDEO_HTTP_PORT__|$${VIDEO_HTTP_PORT}|g" \
+          -e "s|__NOTIFICATION_HTTP_PORT__|$${NOTIFICATION_HTTP_PORT}|g" \
+          /etc/prometheus/prometheus.template.yml > /etc/prometheus/prometheus.yml
+        exec /bin/prometheus \
+          --config.file=/etc/prometheus/prometheus.yml \
+          --storage.tsdb.path=/prometheus \
+          --storage.tsdb.retention.time=$${PROMETHEUS_RETENTION} \
+          --web.enable-lifecycle
+    environment:
+      GATEWAY_MANAGEMENT_PORT: ${GATEWAY_MANAGEMENT_PORT:-8091}
+      AUTH_MANAGEMENT_PORT: ${AUTH_MANAGEMENT_PORT:-8091}
+      USER_MANAGEMENT_PORT: ${USER_MANAGEMENT_PORT:-8093}
+      SCHEDULE_MANAGEMENT_PORT: ${SCHEDULE_MANAGEMENT_PORT:-8094}
+      EMR_MANAGEMENT_PORT: ${EMR_MANAGEMENT_PORT:-8095}
+      APPOINTMENT_HTTP_PORT: ${APPOINTMENT_HTTP_PORT:-8083}
+      CHAT_HTTP_PORT: ${CHAT_HTTP_PORT:-8085}
+      FILE_HTTP_PORT: ${FILE_HTTP_PORT:-8086}
+      VIDEO_HTTP_PORT: ${VIDEO_HTTP_PORT:-8087}
+      NOTIFICATION_HTTP_PORT: ${NOTIFICATION_HTTP_PORT:-8088}
+      PROMETHEUS_RETENTION: ${PROMETHEUS_RETENTION:-15d}
+    volumes:
+      - ./infra/observability/prometheus/prometheus.template.yml:/etc/prometheus/prometheus.template.yml:ro
+      - ./infra/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.16
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:${GRAFANA_PORT:-3001}}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  appointment-service-migrations:
+    image: telemedicine/appointment-service:local
+    command: ["/app/.venv/bin/alembic", "upgrade", "head"]
+    environment:
+      APP_DATABASE_URL: postgresql+psycopg://appointment_svc:${APPOINTMENT_DB_PASSWORD:-appointment}@postgres:5432/${POSTGRES_DB:-telemedicine}
+      APP_DB_SCHEMA: appointment_service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  appointment-service:
+    build:
+      context: .
+      dockerfile: services/appointment-service/Dockerfile
+    image: telemedicine/appointment-service:local
+    command: ["/app/.venv/bin/uvicorn", "appointment.main:app", "--host", "0.0.0.0", "--port", "${APPOINTMENT_HTTP_PORT:-8083}"]
+    environment:
+      APP_ENV: ${APPOINTMENT_ENV:-dev}
+      APP_LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_DATABASE_URL: postgresql+psycopg://appointment_svc:${APPOINTMENT_DB_PASSWORD:-appointment}@postgres:5432/${POSTGRES_DB:-telemedicine}
+      APP_DB_SCHEMA: appointment_service
+      APP_DB_POOL_SIZE: "${APPOINTMENT_DB_POOL_SIZE:-5}"
+      APP_DB_MAX_OVERFLOW: "${APPOINTMENT_DB_MAX_OVERFLOW:-10}"
+      APP_AUTO_MIGRATE: "false"
+      APP_REDIS_URL: redis://redis:6379/1
+      APP_CACHE_ENABLED: "true"
+      APP_RABBITMQ_URL: amqp://${RABBITMQ_USER:-telemedicine}:${RABBITMQ_PASSWORD:-telemedicine}@rabbitmq:5672/
+      APP_RABBITMQ_EXCHANGE: appointment.events
+      APP_JWT_ALGORITHM: RS256
+      APP_JWT_SECRET: ${PYTHON_SERVICE_JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      APP_JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      APP_JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      APP_JWKS_URL: ${JWT_JWKS_URL:-http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks}
+      APP_AUTH_REDIS_URL: redis://redis:6379/0
+      APP_AUTH_REVOCATION_ENABLED: "true"
+      APP_INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      APP_SCHEDULE_SERVICE_URL: http://schedule-service:${SCHEDULE_HTTP_PORT:-8084}
+      APP_USER_SERVICE_URL: http://user-service:${USER_HTTP_PORT:-8082}
+      APP_CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${GATEWAY_HOST_PORT:-8081}}
+    depends_on:
+      appointment-service-migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${APPOINTMENT_HTTP_PORT:-8083}/health/ready', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  chat-service-migrations:
+    image: telemedicine/chat-service:local
+    command: ["/app/.venv/bin/alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://chat_svc:${CHAT_DB_PASSWORD:-chat}@postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_SCHEMA: chat_service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: services/chat-service/Dockerfile
+    image: telemedicine/chat-service:local
+    command: ["/app/.venv/bin/uvicorn", "chat_service.main:app", "--host", "0.0.0.0", "--port", "${CHAT_HTTP_PORT:-8085}"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://chat_svc:${CHAT_DB_PASSWORD:-chat}@postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_SCHEMA: chat_service
+      REDIS_URL: redis://redis:6379/2
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-telemedicine}:${RABBITMQ_PASSWORD:-telemedicine}@rabbitmq:5672/
+      RABBITMQ_EVENTS_EXCHANGE: chat.events
+      JWT_PUBLIC_KEY: ""
+      JWT_SECRET: ${PYTHON_SERVICE_JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      JWT_ALGORITHM: RS256
+      JWT_JWKS_URL: ${JWT_JWKS_URL:-http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks}
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      AUTH_REDIS_URL: redis://redis:6379/0
+      AUTH_REVOCATION_ENABLED: "true"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      AUTH_DISABLED: "false"
+      TEST_USER_ID: ${DEV_USER_ID:-00000000-0000-0000-0000-000000000001}
+      REQUEST_GATEWAY_ENABLED: "true"
+      APPOINTMENT_SERVICE_URL: http://appointment-service:${APPOINTMENT_HTTP_PORT:-8083}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${GATEWAY_HOST_PORT:-8081}}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      RATE_LIMIT_PER_MIN: ${CHAT_RATE_LIMIT_PER_MIN:-60}
+      MAX_MESSAGE_LENGTH: ${CHAT_MAX_MESSAGE_LENGTH:-4096}
+    depends_on:
+      chat-service-migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${CHAT_HTTP_PORT:-8085}/health/ready', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  file-service-migrations:
+    build:
+      context: .
+      dockerfile: services/file-service/Dockerfile
+    image: telemedicine/file-service:local
+    command: ["/app/.venv/bin/alembic", "upgrade", "head"]
+    environment: *file-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  file-service:
+    build:
+      context: .
+      dockerfile: services/file-service/Dockerfile
+    image: telemedicine/file-service:local
+    command:
+      - /app/.venv/bin/uvicorn
+      - file_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "${FILE_HTTP_PORT:-8086}"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - "*"
+    environment: *file-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      file-service-migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD-SHELL', "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${FILE_HTTP_PORT:-8086}/health/ready', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  video-service-migrations:
+    image: telemedicine/video-service:local
+    command: ["/app/.venv/bin/alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://video_svc:${VIDEO_DB_PASSWORD:-video}@postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_SCHEMA: video_service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  video-service:
+    build:
+      context: .
+      dockerfile: services/video_service/Dockerfile
+    image: telemedicine/video-service:local
+    command: ["/app/.venv/bin/uvicorn", "video_service.main:app", "--host", "0.0.0.0", "--port", "${VIDEO_HTTP_PORT:-8087}"]
+    environment:
+      ENVIRONMENT: ${VIDEO_ENVIRONMENT:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DOCS_ENABLED: "true"
+      AUTH_ENABLED: "true"
+      JWT_ALGORITHM: RS256
+      JWT_SECRET: ${PYTHON_SERVICE_JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      JWT_JWKS_URL: ${JWT_JWKS_URL:-http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks}
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      LIVEKIT_URL: http://livekit:7880
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-ws://localhost:${LIVEKIT_PORT:-7880}}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      LIVEKIT_TOKEN_TTL_SECONDS: ${LIVEKIT_TOKEN_TTL_SECONDS:-900}
+      LIVEKIT_ROOM_EMPTY_TIMEOUT_SECONDS: ${LIVEKIT_ROOM_EMPTY_TIMEOUT_SECONDS:-300}
+      APPOINTMENT_SERVICE_URL: http://appointment-service:${APPOINTMENT_HTTP_PORT:-8083}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      AUTH_REDIS_URL: redis://redis:6379/0
+      AUTH_REVOCATION_ENABLED: "true"
+      STORAGE_BACKEND: postgres
+      DATABASE_URL: postgresql+psycopg://video_svc:${VIDEO_DB_PASSWORD:-video}@postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_SCHEMA: video_service
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-telemedicine}:${RABBITMQ_PASSWORD:-telemedicine}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: video.events
+      REDIS_URL: ${VIDEO_REDIS_URL:-redis://redis:6379/4}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${GATEWAY_HOST_PORT:-8081}}
+    depends_on:
+      video-service-migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      livekit:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${VIDEO_HTTP_PORT:-8087}/health/ready', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  notification-service-migrations:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: telemedicine/notification-service:local
+    command: ["/app/.venv/bin/alembic", "upgrade", "head"]
+    environment: *notification-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: telemedicine/notification-service:local
+    command:
+      - /app/.venv/bin/uvicorn
+      - notification_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "${NOTIFICATION_HTTP_PORT:-8088}"
+    environment: *notification-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      notification-service-migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD-SHELL', "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${NOTIFICATION_HTTP_PORT:-8088}/health/ready', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 35s
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    image: telemedicine/auth-service:local
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_USER: auth_svc
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_svc}
+      DB_SCHEMA: ${AUTH_DB_SCHEMA:-auth_service}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: "5672"
+      RABBIT_USER: ${RABBITMQ_USER:-telemedicine}
+      RABBIT_PASSWORD: ${RABBITMQ_PASSWORD:-telemedicine}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:${GATEWAY_HOST_PORT:-8081}/api/v1/auth/oauth/google/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+      FRONTEND_OAUTH_CALLBACK_PATH: ${FRONTEND_OAUTH_CALLBACK_PATH:-/oauth/callback}
+      BOOTSTRAP_ADMIN_ENABLED: "true"
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@telemedicine.local}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Root123456789!}
+      JWT_KEY_DIR: /data/jwt
+      JWT_KEY_ID: auth-service-key
+      SERVER_PORT: "${AUTH_HTTP_PORT:-8080}"
+      MANAGEMENT_PORT: "${AUTH_MANAGEMENT_PORT:-8091}"
+      SPRINGDOC_ENABLED: ${SPRINGDOC_ENABLED:-true}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      ENV: docker
+    volumes:
+      - jwt-keys:/data/jwt
+    mem_limit: 640m
+    memswap_limit: 640m
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${AUTH_MANAGEMENT_PORT:-8091}/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    image: telemedicine/user-service:local
+    environment:
+      SERVER_PORT: "${USER_HTTP_PORT:-8082}"
+      MANAGEMENT_PORT: "${USER_MANAGEMENT_PORT:-8093}"
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_USER: user_svc
+      DB_PASSWORD: ${USER_DB_PASSWORD:-user_svc}
+      DB_SCHEMA: ${USER_DB_SCHEMA:-user_service}
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: "5672"
+      RABBIT_USER: ${RABBITMQ_USER:-telemedicine}
+      RABBIT_PASSWORD: ${RABBITMQ_PASSWORD:-telemedicine}
+      JWK_SET_URI: http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      AUTH_SERVICE_URL: http://auth-service:${AUTH_HTTP_PORT:-8080}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      RECONCILE_INITIAL_DELAY: ${RECONCILE_INITIAL_DELAY:-20s}
+      ENV: docker
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${USER_MANAGEMENT_PORT:-8093}/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  schedule-service:
+    build:
+      context: .
+      dockerfile: services/schedule-service/Dockerfile
+    image: telemedicine/schedule-service:local
+    environment:
+      SERVER_PORT: "${SCHEDULE_HTTP_PORT:-8084}"
+      MANAGEMENT_PORT: "${SCHEDULE_MANAGEMENT_PORT:-8094}"
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_USER: schedule_svc
+      DB_PASSWORD: ${SCHEDULE_DB_PASSWORD:-schedule_svc}
+      DB_SCHEMA: ${SCHEDULE_DB_SCHEMA:-schedule_service}
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: "5672"
+      RABBIT_USER: ${RABBITMQ_USER:-telemedicine}
+      RABBIT_PASSWORD: ${RABBITMQ_PASSWORD:-telemedicine}
+      JWK_SET_URI: http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      USER_SERVICE_URL: http://user-service:${USER_HTTP_PORT:-8082}
+      SCHEDULE_USER_VALIDATION_ENABLED: "true"
+      SCHEDULE_APPOINTMENT_RECONCILE_ENABLED: ${SCHEDULE_APPOINTMENT_RECONCILE_ENABLED:-false}
+
+      SCHEDULE_HOLD_MINUTES: ${SCHEDULE_HOLD_MINUTES:-10080}
+      ENV: docker
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${SCHEDULE_MANAGEMENT_PORT:-8094}/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  emr-service:
+    build:
+      context: .
+      dockerfile: services/emr-service/Dockerfile
+    image: telemedicine/emr-service:local
+    environment:
+      SERVER_PORT: "${EMR_HTTP_PORT:-8089}"
+      MANAGEMENT_PORT: "${EMR_MANAGEMENT_PORT:-8095}"
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-telemedicine}
+      DB_USER: emr_svc
+      DB_PASSWORD: ${EMR_DB_PASSWORD:-emr_svc}
+      DB_SCHEMA: ${EMR_DB_SCHEMA:-emr_service}
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: "5672"
+      RABBIT_USER: ${RABBITMQ_USER:-telemedicine}
+      RABBIT_PASSWORD: ${RABBITMQ_PASSWORD:-telemedicine}
+      JWK_SET_URI: http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      ENV: docker
+      EMR_REQUIRE_APPOINTMENT: "true"
+      EMR_RETENTION_DAYS: ${EMR_RETENTION_DAYS:-3650}
+      EMR_APPOINTMENT_VALIDATION_ENABLED: ${EMR_APPOINTMENT_VALIDATION_ENABLED:-false}
+      EMR_FILE_VALIDATION_ENABLED: ${EMR_FILE_VALIDATION_ENABLED:-false}
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${EMR_MANAGEMENT_PORT:-8095}/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    image: telemedicine/api-gateway:local
+    environment:
+      SERVER_PORT: "${GATEWAY_HTTP_PORT:-8081}"
+      MANAGEMENT_PORT: "${GATEWAY_MANAGEMENT_PORT:-8091}"
+      AUTH_SERVICE_URL: http://auth-service:${AUTH_HTTP_PORT:-8080}
+      USER_SERVICE_URL: http://user-service:${USER_HTTP_PORT:-8082}
+      APPOINTMENT_SERVICE_URL: http://appointment-service:${APPOINTMENT_HTTP_PORT:-8083}
+      SCHEDULE_SERVICE_URL: http://schedule-service:${SCHEDULE_HTTP_PORT:-8084}
+      CHAT_SERVICE_URL: http://chat-service:${CHAT_HTTP_PORT:-8085}
+      FILE_SERVICE_URL: http://file-service:${FILE_HTTP_PORT:-8086}
+      VIDEO_SERVICE_URL: http://video-service:${VIDEO_HTTP_PORT:-8087}
+      NOTIFICATION_SERVICE_URL: http://notification-service:${NOTIFICATION_HTTP_PORT:-8088}
+      EMR_SERVICE_URL: http://emr-service:${EMR_HTTP_PORT:-8089}
+      JWK_SET_URI: http://auth-service:${AUTH_HTTP_PORT:-8080}/oauth2/jwks
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-telemedicine}
+      JWT_BLACKLIST_ENABLED: "true"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+      SPRINGDOC_ENABLED: ${SPRINGDOC_ENABLED:-true}
+      ENV: docker
+    mem_limit: 640m
+    memswap_limit: 640m
+    cpus: 1.0
+    ports:
+      - "${GATEWAY_HOST_PORT:-8081}:${GATEWAY_HTTP_PORT:-8081}"
+      - "${GATEWAY_MANAGEMENT_HOST_PORT:-8092}:${GATEWAY_MANAGEMENT_PORT:-8091}"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      appointment-service:
+        condition: service_healthy
+      chat-service:
+        condition: service_healthy
+      file-service:
+        condition: service_healthy
+      video-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${GATEWAY_MANAGEMENT_PORT:-8091}/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        VITE_GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:${GATEWAY_HOST_PORT:-8081}/api/v1/auth/oauth/google/callback}
+    image: telemedicine/frontend:local
+    environment:
+      GATEWAY_HTTP_PORT: ${GATEWAY_HTTP_PORT:-8081}
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  minio-data:
+  jwt-keys:
+  loki-data:
+  alloy-data:
+  prometheus-data:
+  grafana-data:
