@@ -1,0 +1,3 @@
+com.telemed.common.messaging.config.MessagingAutoConfiguration
+com.telemed.common.messaging.converter.JsonMessageConverterConfig
+com.telemed.common.messaging.dlq.DlqAdminAutoConfiguration
