@@ -1,0 +1,102 @@
+[project]
+name = "telemedicine-platform"
+version = "0.0.1"
+description = "Telemedicine platform: uv workspace root (shared libs + Python microservices)"
+requires-python = ">=3.14"
+
+[tool.uv.workspace]
+members = [
+    "libs/python/*",
+
+    "services/appointment-service",
+    "services/chat-service",
+    "services/file-service",
+    "services/video_service",
+    "services/notification-service",
+]
+
+
+[tool.uv]
+package = false
+constraint-dependencies = [
+    "fastapi==0.143.3",
+    "uvicorn==0.54.0",
+    "pydantic==2.14.1",
+    "pydantic-settings==2.16.0",
+    "pyjwt==2.15.1",
+    "cryptography==50.0.2",
+    "sqlalchemy[asyncio]==2.1.5",
+    "asyncpg==0.32.0",
+    "psycopg[binary]==3.3.9",
+    "alembic==1.20.0",
+    "aio-pika==10.1.1",
+    "redis==8.1.0",
+    "minio==7.2.20",
+    "python-multipart==0.0.32",
+    "livekit-api==2.0.1",
+    "structlog==26.1.0",
+    "prometheus-client==0.26.0",
+    "httpx==0.28.1",
+    "anyio==4.16.0",
+    "urllib3==2.8.0",
+    "websockets==17.4",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "testcontainers==4.15.0",
+    "aiosmtplib==4.0.2",
+    "ruff==0.17.6",
+    "mypy==1.20.2",
+]
+
+
+[tool.uv.sources]
+common-auth = { workspace = true }
+common-db = { workspace = true }
+common-events = { workspace = true }
+common-messaging = { workspace = true }
+common-observability = { workspace = true }
+common-outbox = { workspace = true }
+common-web = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+exclude = [
+    ".venv",
+    "**/.venv",
+    "**/__pycache__",
+    "**/migrations/versions",
+    "**/alembic/versions",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
+ignore = ["B008", "RUF001", "RUF002", "RUF003", "RUF012"]
+
+[tool.mypy]
+python_version = "3.14"
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+exclude = ["(?x)(^|/)(\\.venv|migrations/versions|alembic/versions)/"]
+
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["libs/python", "services"]
+norecursedirs = [".venv", "**/.venv", "**/migrations", "**/alembic"]
+markers = ["integration: requires external services (Docker/Testcontainers)"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
