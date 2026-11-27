@@ -1,0 +1,67 @@
+name: frontend
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: telemedicine/frontend:local
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Node dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build image
+        run: docker build -f frontend/Dockerfile -t "$IMAGE" frontend
+
+      - name: Start demo
+        run: |
+          docker run -d --name demo-frontend \
+            -p 3000:80 \
+            -e GATEWAY_HTTP_PORT=8081 \
+            "$IMAGE"
+
+      - name: Check demo
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3000/ > /dev/null; then
+              echo "frontend demo is ready"
+              exit 0
+            fi
+            if [ "$i" = "60" ]; then
+              docker logs demo-frontend
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Show demo logs
+        if: failure()
+        run: docker logs demo-frontend || true
+
+      - name: Stop demo
+        if: always()
+        run: docker rm -f demo-frontend || true
