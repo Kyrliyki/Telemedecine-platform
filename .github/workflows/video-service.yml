@@ -1,0 +1,37 @@
+name: video-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/video-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/video-service.yml'
+      - '.github/workflows/_python-service.yml'
+  pull_request:
+    paths:
+      - 'services/video-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/video-service.yml'
+      - '.github/workflows/_python-service.yml'
+  workflow_dispatch:
+
+jobs:
+  video-service:
+    uses: ./.github/workflows/_python-service.yml
+    with:
+      service: video-service
+      service_dir: services/video-service
+      demo_deps: redis

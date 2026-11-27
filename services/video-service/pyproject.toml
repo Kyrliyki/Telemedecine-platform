@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video-service"
+version = "0.1.0"
+description = "Video consultation microservice: LiveKit rooms, access tokens and call lifecycle"
+requires-python = ">=3.14"
+dependencies = [
+    "aio-pika",
+    "alembic",
+    "fastapi",
+    "httpx",
+    "livekit-api",
+    "prometheus-client",
+    "psycopg[binary]",
+    "pydantic-settings",
+    "pyjwt[crypto]",
+    "redis",
+    "sqlalchemy[asyncio]",
+    "structlog",
+    "uvicorn",
+    "common-auth",
+    "common-observability",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "testcontainers",
+]
+
+[tool.uv.sources]
+common-auth = { workspace = true }
+common-observability = { workspace = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests_video_service"]
+exclude = ["migrations/versions", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests_video_service"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra"
+markers = ["integration: requires external services (Docker/Testcontainers)"]

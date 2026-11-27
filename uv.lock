@@ -2370,7 +2370,7 @@ wheels = [
 [[package]]
 name = "video-service"
 version = "0.1.0"
-source = { editable = "services/video_service" }
+source = { editable = "services/video-service" }
 dependencies = [
     { name = "aio-pika" },
     { name = "alembic" },
