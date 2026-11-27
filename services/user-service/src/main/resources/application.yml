@@ -1,0 +1,135 @@
+server:
+  port: ${SERVER_PORT:8082}
+  shutdown: graceful
+  tomcat:
+    connection-timeout: 5s
+
+spring:
+  application:
+    name: user-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/telemedicine}
+    username: ${DB_USER:telemedicine}
+    password: ${DB_PASSWORD:telemedicine}
+    hikari:
+      schema: ${DB_SCHEMA:user_service}
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      connection-timeout: 5000
+      validation-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:user_service}
+        jdbc:
+          time_zone: UTC
+      jakarta:
+        persistence:
+          query:
+            timeout: 10000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: ${DB_SCHEMA:user_service}
+    default-schema: ${DB_SCHEMA:user_service}
+    create-schemas: true
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
+    connection-timeout: 5s
+    requested-heartbeat: 30s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        prefetch: 10
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 10s
+          stateless: true
+
+messaging:
+  enabled: true
+  exchange: user.events
+  dlx: user.events.dlx
+  publisher-confirms: true
+
+outbox:
+  enabled: true
+  batch-size: 100
+  retention: 7d
+  max-attempts: 5
+  relay:
+    interval: 1000
+  cleanup:
+    cron: "0 0 3 * * *"
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:auth-service}
+    jwk-set-uri: ${JWK_SET_URI:http://localhost:8080/oauth2/jwks}
+    audience:
+      - ${JWT_AUDIENCE:telemedicine}
+    clock-skew: 30s
+    blacklist-enabled: false
+  internal:
+    enabled: ${SECURITY_INTERNAL_ENABLED:true}
+    token: ${INTERNAL_SERVICE_TOKEN:}
+    header: X-Internal-Token
+
+user:
+  auth-service:
+    base-url: ${AUTH_SERVICE_URL:http://localhost:8080}
+    internal-token: ${INTERNAL_SERVICE_TOKEN:}
+    page-size: ${RECONCILIATION_PAGE_SIZE:100}
+    reconciliation-enabled: ${RECONCILIATION_ENABLED:true}
+    reconcile-interval: ${RECONCILE_INTERVAL:1h}
+    reconcile-initial-delay: ${RECONCILE_INITIAL_DELAY:30s}
+  processed-events:
+    retention: ${PROCESSED_EVENTS_RETENTION:30d}
+    cleanup-cron: ${PROCESSED_EVENTS_CLEANUP_CRON:0 0 3 * * *}
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8093}
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,rabbitConnection
+
+observability:
+  environment: ${ENV:dev}
+
+logging:
+  structured:
+    format:
+      console: ecs
+    ecs:
+      service:
+        name: ${spring.application.name:user-service}
+        environment: ${observability.environment:dev}
