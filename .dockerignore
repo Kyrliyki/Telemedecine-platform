@@ -64,8 +64,8 @@ services/*
 !services/appointment-service/**
 !services/file-service
 !services/file-service/**
-!services/video_service
-!services/video_service/**
+!services/video-service
+!services/video-service/**
 !services/chat-service
 !services/chat-service/**
 !services/api-gateway
