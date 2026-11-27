@@ -79,7 +79,7 @@ cd services/api-gateway
 - [schedule-service](../schedule-service/README.md)
 - [chat-service](../chat-service/README.md)
 - [file-service](../file-service/README.md)
-- [video-service](../video_service/README.md)
+- [video-service](../video-service/README.md)
 - [notification-service](../notification-service/README.md)
 - [emr-service](../emr-service/README.md)
 - [frontend](../../frontend/README.md)

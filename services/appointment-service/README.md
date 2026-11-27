@@ -99,7 +99,7 @@ uv run pytest services/appointment-service/tests_appointment_service -q
 - [schedule-service](../schedule-service/README.md) — слоты и доступность.
 - [user-service](../user-service/README.md) — проверка врача и пациента.
 - [chat-service](../chat-service/README.md) — чат по записи.
-- [video-service](../video_service/README.md) — видеозвонок по записи.
+- [video-service](../video-service/README.md) — видеозвонок по записи.
 - [emr-service](../emr-service/README.md) — медицинская запись по приёму.
 - [api-gateway](../api-gateway/README.md) — маршрутизация.
 

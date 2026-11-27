@@ -458,7 +458,7 @@ services:
   video-service:
     build:
       context: .
-      dockerfile: services/video_service/Dockerfile
+      dockerfile: services/video-service/Dockerfile
     image: telemedicine/video-service:local
     command: ["/app/.venv/bin/uvicorn", "video_service.main:app", "--host", "0.0.0.0", "--port", "${VIDEO_HTTP_PORT:-8087}"]
     environment:

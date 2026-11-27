@@ -11,7 +11,7 @@ members = [
     "services/appointment-service",
     "services/chat-service",
     "services/file-service",
-    "services/video_service",
+    "services/video-service",
     "services/notification-service",
 ]
 

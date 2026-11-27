@@ -82,7 +82,7 @@ uv run uvicorn video_service.main:app --reload --port 8087
 ## Тесты
 
 ```powershell
-uv run pytest services/video_service/tests_video_service -q
+uv run pytest services/video-service/tests_video_service -q
 ```
 
 Интеграционные тесты LiveKit требуют доступный LiveKit и Docker.

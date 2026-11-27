@@ -99,7 +99,7 @@ WebSocket-тесты и интеграционные тесты требуют �
 - [appointment-service](../appointment-service/README.md) — диалоги по записям.
 - [file-service](../file-service/README.md) — вложения.
 - [notification-service](../notification-service/README.md) — уведомления.
-- [video-service](../video_service/README.md) — звонки из чата.
+- [video-service](../video-service/README.md) — звонки из чата.
 - [api-gateway](../api-gateway/README.md) — маршрутизация HTTP и WebSocket.
 
 ## Ссылки

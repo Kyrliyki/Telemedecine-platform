@@ -14,11 +14,11 @@ RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
 COPY libs/python ./libs/python
-COPY services/video_service ./services/video_service
+COPY services/video-service ./services/video-service
 
 RUN uv sync --package video-service --no-dev --frozen
 
-WORKDIR /app/services/video_service
+WORKDIR /app/services/video-service
 
 EXPOSE 8087
 
