@@ -1,0 +1,31 @@
+name: api-gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/api-gateway/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/workflows/api-gateway.yml'
+      - '.github/workflows/_java-service.yml'
+  pull_request:
+    paths:
+      - 'services/api-gateway/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/workflows/api-gateway.yml'
+      - '.github/workflows/_java-service.yml'
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_java-service.yml
+    with:
+      service: api-gateway
+      service_dir: services/api-gateway
+      demo: gateway
