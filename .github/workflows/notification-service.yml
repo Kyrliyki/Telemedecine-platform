@@ -1,0 +1,36 @@
+name: notification-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/notification-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/notification-service.yml'
+      - '.github/workflows/_python-service.yml'
+  pull_request:
+    paths:
+      - 'services/notification-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/notification-service.yml'
+      - '.github/workflows/_python-service.yml'
+  workflow_dispatch:
+
+jobs:
+  notification-service:
+    uses: ./.github/workflows/_python-service.yml
+    with:
+      service: notification-service
+      service_dir: services/notification-service
