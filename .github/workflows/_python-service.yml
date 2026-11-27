@@ -1,0 +1,116 @@
+name: python-service
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      service_dir:
+        required: true
+        type: string
+      demo_deps:
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  COMPOSE_PROJECT_NAME: telemed-ci
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE: ${{ inputs.service }}
+      SERVICE_DIR: ${{ inputs.service_dir }}
+      DEMO_DEPS: ${{ inputs.demo_deps }}
+      IMAGE: telemedicine/${{ inputs.service }}:local
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          python-version: '3.14'
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: uv sync --all-packages --all-extras
+
+      - name: Lint Python
+        run: uv run ruff check "$SERVICE_DIR"
+
+      - name: Test Python
+        shell: bash
+        run: |
+          tests="$(find "$SERVICE_DIR" -maxdepth 1 -type d -name 'tests*' -print)"
+          if [ -n "$tests" ]; then
+            uv run pytest $tests -q
+          else
+            echo "No tests found in $SERVICE_DIR"
+          fi
+
+      - name: Build image
+        run: docker build -f "$SERVICE_DIR/Dockerfile" -t "$IMAGE" .
+
+      - name: Prepare demo env
+        run: cp .env.example .env
+
+      - name: Wait for database schema
+        shell: bash
+        run: |
+          schema="${SERVICE//-/_}"
+          role="${schema%_service}_svc"
+          docker compose up -d postgres
+          for i in {1..60}; do
+            if docker compose exec -T postgres pg_isready -U telemedicine -d telemedicine >/dev/null 2>&1; then
+              if docker compose exec -T postgres psql -U telemedicine -d telemedicine -tAc "SELECT 1 FROM pg_namespace WHERE nspname='$schema'" 2>/dev/null | grep -q 1 \
+                 && docker compose exec -T postgres psql -U telemedicine -d telemedicine -tAc "SELECT 1 FROM pg_roles WHERE rolname='$role'" 2>/dev/null | grep -q 1; then
+                echo "database schema $schema and role $role are ready"
+                exit 0
+              fi
+            fi
+            if [ "$i" = "60" ]; then
+              docker compose logs postgres
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Start demo
+        run: docker compose up -d "$SERVICE" $DEMO_DEPS
+
+      - name: Check demo
+        run: |
+          cid="$(docker compose ps -q "$SERVICE")"
+          if [ -z "$cid" ]; then
+            docker compose logs "$SERVICE"
+            exit 1
+          fi
+          for i in {1..90}; do
+            status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || echo missing)"
+            case "$status" in
+              healthy|running)
+                echo "$SERVICE is $status"
+                exit 0
+                ;;
+              unhealthy|exited|dead)
+                docker compose logs "$SERVICE"
+                exit 1
+                ;;
+            esac
+            sleep 5
+          done
+          docker compose logs "$SERVICE"
+          exit 1
+
+      - name: Show demo logs
+        if: failure()
+        run: docker compose logs || true
+
+      - name: Stop demo
+        if: always()
+        run: docker compose down -v --remove-orphans || true

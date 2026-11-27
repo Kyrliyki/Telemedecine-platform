@@ -1,0 +1,17 @@
+[project]
+name = "common-observability"
+version = "0.0.1"
+description = "Structured logging, correlation IDs, metrics and health endpoints for FastAPI"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "structlog",
+    "prometheus-client",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/common_observability"]
