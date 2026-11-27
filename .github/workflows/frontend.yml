@@ -1,0 +1,19 @@
+name: frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+      - '.github/workflows/_frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+      - '.github/workflows/_frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    uses: ./.github/workflows/_frontend.yml
