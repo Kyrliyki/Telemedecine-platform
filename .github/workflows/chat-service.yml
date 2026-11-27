@@ -1,0 +1,37 @@
+name: chat-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/chat-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/chat-service.yml'
+      - '.github/workflows/_python-service.yml'
+  pull_request:
+    paths:
+      - 'services/chat-service/**'
+      - 'libs/python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/chat-service.yml'
+      - '.github/workflows/_python-service.yml'
+  workflow_dispatch:
+
+jobs:
+  chat-service:
+    uses: ./.github/workflows/_python-service.yml
+    with:
+      service: chat-service
+      service_dir: services/chat-service
+      demo_deps: rabbitmq

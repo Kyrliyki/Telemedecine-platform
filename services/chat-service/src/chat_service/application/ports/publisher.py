@@ -1,0 +1,13 @@
+from typing import Any, Protocol
+from uuid import UUID
+
+
+class EventPublisher(Protocol):
+    async def publish_to_user(self, user_id: UUID, event: dict[str, Any]) -> None: ...
+    async def publish_to_users(self, user_ids: list[UUID], event: dict[str, Any]) -> None: ...
+
+
+class ChatEventsPublisher(Protocol):
+    async def publish_deleted(self, *, chat_id: UUID, request_id: str) -> None: ...
+
+    async def aclose(self) -> None: ...
