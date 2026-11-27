@@ -1,0 +1,3 @@
+com.telemed.common.security.jwt.JwtAutoConfiguration
+com.telemed.common.security.config.BlacklistAutoConfiguration
+com.telemed.common.security.config.SecurityAutoConfiguration

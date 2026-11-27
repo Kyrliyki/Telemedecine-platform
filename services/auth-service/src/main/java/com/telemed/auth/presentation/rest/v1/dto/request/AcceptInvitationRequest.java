@@ -1,0 +1,7 @@
+package com.telemed.auth.presentation.rest.v1.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record AcceptInvitationRequest(
+    @NotBlank String token, @NotBlank @Size(min = 12, max = 128) String password) {}

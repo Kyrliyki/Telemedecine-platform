@@ -1,0 +1,39 @@
+name: auth-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/auth-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/auth-service.yml'
+      - '.github/workflows/_java-service.yml'
+  pull_request:
+    paths:
+      - 'services/auth-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/auth-service.yml'
+      - '.github/workflows/_java-service.yml'
+  workflow_dispatch:
+
+jobs:
+  auth-service:
+    uses: ./.github/workflows/_java-service.yml
+    with:
+      service: auth-service
+      service_dir: services/auth-service
+      demo: compose

@@ -1,0 +1,9 @@
+CREATE SCHEMA IF NOT EXISTS auth_service;
+CREATE SCHEMA IF NOT EXISTS user_service;
+CREATE SCHEMA IF NOT EXISTS schedule_service;
+CREATE SCHEMA IF NOT EXISTS emr_service;
+CREATE SCHEMA IF NOT EXISTS appointment_service;
+CREATE SCHEMA IF NOT EXISTS chat_service;
+CREATE SCHEMA IF NOT EXISTS file_service;
+CREATE SCHEMA IF NOT EXISTS video_service;
+CREATE SCHEMA IF NOT EXISTS notification_service;

@@ -1,0 +1,29 @@
+groups:
+  - name: telemedicine-platform
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for 2 minutes."
+
+      - alert: OutboxDeadEvents
+        expr: increase(outbox_dead_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox event moved to DEAD"
+          description: "At least one integration event exhausted all publish attempts."
+
+      - alert: GatewayFallbackResponses
+        expr: sum(rate(gateway_requests_total{status="503"}[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Gateway is returning fallback 503 responses"
+          description: "A downstream service is unavailable or timing out."
