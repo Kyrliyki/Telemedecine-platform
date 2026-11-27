@@ -1,0 +1,39 @@
+name: emr-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/emr-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/emr-service.yml'
+      - '.github/workflows/_java-service.yml'
+  pull_request:
+    paths:
+      - 'services/emr-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/emr-service.yml'
+      - '.github/workflows/_java-service.yml'
+  workflow_dispatch:
+
+jobs:
+  emr-service:
+    uses: ./.github/workflows/_java-service.yml
+    with:
+      service: emr-service
+      service_dir: services/emr-service
+      demo: compose
