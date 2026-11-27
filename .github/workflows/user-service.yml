@@ -1,0 +1,39 @@
+name: user-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/user-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/user-service.yml'
+      - '.github/workflows/_java-service.yml'
+  pull_request:
+    paths:
+      - 'services/user-service/**'
+      - 'libs/java/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'infra/**'
+      - '.github/workflows/user-service.yml'
+      - '.github/workflows/_java-service.yml'
+  workflow_dispatch:
+
+jobs:
+  user-service:
+    uses: ./.github/workflows/_java-service.yml
+    with:
+      service: user-service
+      service_dir: services/user-service
+      demo: compose
